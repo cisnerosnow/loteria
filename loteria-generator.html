@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Tablas de Lotería Mexicana</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --rojo:    #c8102e;
+      --verde:   #006847;
+      --amari:   #f5a623;
+      --marron:  #7b3f00;
+      --crema:   #fef9ee;
+      --borde:   #a00020;
+      --sombra:  rgba(0,0,0,.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: var(--crema);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, var(--rojo) 60%, #9b0020 100%);
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 3px 10px var(--sombra);
+    }
+    header .logo { font-size: 2.2rem; }
+    header h1 {
+      font-size: clamp(1rem, 3vw, 1.5rem);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      line-height: 1.3;
+    }
+    header p {
+      font-size: .78rem;
+      opacity: .85;
+      font-style: italic;
+    }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: flex;
+      gap: 0;
+      min-height: calc(100vh - 80px);
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      flex: 0 0 260px;
+      background: #fff;
+      border-right: 3px solid var(--amari);
+      padding: 1.4rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .9rem;
+    }
+
+    .sidebar-title {
+      color: var(--rojo);
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      border-bottom: 2px solid var(--amari);
+      padding-bottom: .5rem;
+      margin-bottom: .2rem;
+    }
+
+    .form-row {
+      display: flex;
+      gap: .6rem;
+    }
+    .form-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+    }
+    .form-group label {
+      font-size: .74rem;
+      font-weight: bold;
+      color: var(--marron);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .form-group input, .form-group select {
+      padding: .38rem .5rem;
+      border: 2px solid #e0c080;
+      border-radius: 5px;
+      font-size: .95rem;
+      font-family: inherit;
+      background: #fffdf6;
+      transition: border-color .2s;
+      width: 100%;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--rojo);
+    }
+
+    .info-badge {
+      background: #fff8e6;
+      border: 1px solid var(--amari);
+      border-radius: 6px;
+      padding: .5rem .7rem;
+      font-size: .78rem;
+      color: var(--marron);
+    }
+    .info-badge strong { color: var(--rojo); }
+
+    .warn {
+      color: #c05000;
+      font-size: .76rem;
+      background: #fff3e0;
+      border: 1px solid #ffa040;
+      border-radius: 5px;
+      padding: .4rem .6rem;
+      display: none;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .65rem .8rem;
+      border: none;
+      border-radius: 7px;
+      font-size: .92rem;
+      font-weight: bold;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s, opacity .2s;
+      box-shadow: 0 3px 8px var(--sombra);
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 14px var(--sombra); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .btn-gen  { background: var(--verde); color: #fff; }
+    .btn-pdf  { background: var(--rojo);  color: #fff; }
+
+    .sep {
+      border: none;
+      border-top: 1px dashed #ddd;
+      margin: .2rem 0;
+    }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      padding: 1.4rem 1.6rem;
+      overflow-x: auto;
+    }
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .main-header h2 {
+      color: var(--rojo);
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    #contador {
+      font-size: .8rem;
+      color: #888;
+    }
+
+    #tablas-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.4rem;
+      align-items: flex-start;
+    }
+
+    /* ── TABLA (preview) ── */
+    .tabla-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .3rem;
+    }
+    .tabla {
+      border: 4px solid var(--borde);
+      background: white;
+      box-shadow: 0 4px 14px var(--sombra);
+      overflow: hidden;
+      display: inline-flex;
+      flex-direction: column;
+    }
+    .tabla-header {
+      background: var(--rojo);
+      color: #fff;
+      text-align: center;
+      font-size: .9em;
+      font-weight: bold;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      padding: .28em .4em;
+      flex-shrink: 0;
+    }
+    .tabla-subheader {
+      background: var(--amari);
+      color: var(--marron);
+      text-align: center;
+      font-size: .68em;
+      font-weight: bold;
+      padding: .12em;
+      flex-shrink: 0;
+    }
+    .tabla-grid {
+      display: grid;
+      gap: 0;
+      flex: 1;
+    }
+    .tabla-celda {
+      border: 1px solid var(--borde);
+      overflow: hidden;
+      display: flex;
+    }
+    .tabla-celda img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── LOADING ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity .3s, visibility .3s;
+    }
+    .overlay.active {
+      visibility: visible;
+      opacity: 1;
+    }
+    .overlay-box {
+      background: #fff;
+      border: 4px solid var(--rojo);
+      border-radius: 12px;
+      padding: 2rem 2.5rem;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+      box-shadow: 0 8px 30px rgba(0,0,0,.3);
+    }
+    .overlay-box .big-icon { font-size: 3rem; margin-bottom: .5rem; }
+    .overlay-box h3 {
+      color: var(--rojo);
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: .6rem;
+    }
+    .progress-bar-bg {
+      background: #eee;
+      border-radius: 8px;
+      height: 10px;
+      overflow: hidden;
+      margin: .6rem 0;
+    }
+    .progress-bar {
+      background: linear-gradient(90deg, var(--verde), var(--amari));
+      height: 100%;
+      width: 0%;
+      transition: width .3s;
+      border-radius: 8px;
+    }
+    .overlay-msg { font-size: .85rem; color: #555; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #bbb;
+    }
+    .empty-state .big { font-size: 4rem; }
+    .empty-state p { margin-top: .5rem; font-size: .95rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 700px) {
+      .layout { flex-direction: column; }
+      .sidebar { flex: none; border-right: none; border-bottom: 3px solid var(--amari); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎴</div>
+  <div>
+    <h1>Generador de Tablas de Lotería Mexicana</h1>
+    <p>Cartas tradicionales Don Clemente · Descarga en PDF para imprimir</p>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Configuración</div>
+
+    <!-- Dimensiones -->
+    <div>
+      <div class="sidebar-title" style="font-size:.75rem; margin-bottom:.5rem;">Tamaño de la tabla</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ancho">Ancho (cm)</label>
+          <input type="number" id="ancho" value="18" min="4" max="35" step="0.5">
+        </div>
+        <div class="form-group">
+          <label for="alto">Alto (cm)</label>
+          <input type="number" id="alto" value="24" min="4" max="50" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div>
+      <div class="sidebar-title" style="font-size:.75rem; margin-bottom:.5rem;">Cuadrícula</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="filas">Filas</label>
+          <input type="number" id="filas" value="4" min="1" max="9" step="1">
+        </div>
+        <div class="form-group">
+          <label for="cols">Columnas</label>
+          <input type="number" id="cols" value="4" min="1" max="9" step="1">
+        </div>
+      </div>
+      <div class="warn" id="warn-cards">
+        ⚠️ La cuadrícula supera las 54 cartas disponibles. Se repetirán cartas.
+      </div>
+    </div>
+
+    <!-- Cantidad -->
+    <div class="form-group">
+      <label for="numTablas">Número de tablas</label>
+      <input type="number" id="numTablas" value="6" min="1" max="200" step="1">
+    </div>
+
+    <!-- Formato PDF -->
+    <div>
+      <div class="sidebar-title" style="font-size:.75rem; margin-bottom:.5rem;">Opciones de PDF</div>
+      <div class="form-group">
+        <label for="formato">Tamaño de página</label>
+        <select id="formato">
+          <option value="a4">A4 (21 × 29.7 cm)</option>
+          <option value="letter">Carta / Letter (21.6 × 27.9 cm)</option>
+          <option value="legal">Legal (21.6 × 35.6 cm)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="orientacion">Orientación</label>
+        <select id="orientacion">
+          <option value="portrait">Vertical (Portrait)</option>
+          <option value="landscape">Horizontal (Landscape)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="info-badge" id="info-tablas-pagina">
+      Calculando distribución…
+    </div>
+
+    <hr class="sep">
+
+    <button class="btn btn-gen" onclick="generarTablas()">
+      🎲 Generar Tablas
+    </button>
+    <button class="btn btn-pdf" onclick="descargarPDF()" id="btn-pdf">
+      📄 Descargar PDF
+    </button>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <div class="main-header">
+      <h2>Vista Previa</h2>
+      <span id="contador"></span>
+    </div>
+    <div id="tablas-container">
+      <div class="empty-state">
+        <div class="big">🎴</div>
+        <p>Configura las opciones y haz clic en <strong>Generar Tablas</strong></p>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- ── OVERLAY DE CARGA ── -->
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <div class="big-icon">🎴</div>
+    <h3>Generando PDF</h3>
+    <div class="progress-bar-bg">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <p class="overlay-msg" id="overlay-msg">Cargando imágenes…</p>
+  </div>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────
+   DATOS DE LAS 54 CARTAS TRADICIONALES
+   Fuente de imágenes: fcopaveltorres/LoteriaMexicana (GitHub)
+────────────────────────────────────────────────────────────── */
+const IMG_BASE = 'https://raw.githubusercontent.com/fcopaveltorres/LoteriaMexicana/master/cartas/';
+
+const CARTAS = [
+  { num:  1, nombre: 'El Gallo'       },
+  { num:  2, nombre: 'El Diablito'    },
+  { num:  3, nombre: 'La Dama'        },
+  { num:  4, nombre: 'El Catrín'      },
+  { num:  5, nombre: 'El Paraguas'    },
+  { num:  6, nombre: 'La Sirena'      },
+  { num:  7, nombre: 'La Escalera'    },
+  { num:  8, nombre: 'La Botella'     },
+  { num:  9, nombre: 'El Barril'      },
+  { num: 10, nombre: 'El Árbol'       },
+  { num: 11, nombre: 'El Melón'       },
+  { num: 12, nombre: 'El Valiente'    },
+  { num: 13, nombre: 'El Gorrito'     },
+  { num: 14, nombre: 'La Muerte'      },
+  { num: 15, nombre: 'La Pera'        },
+  { num: 16, nombre: 'La Bandera'     },
+  { num: 17, nombre: 'El Bandolón'    },
+  { num: 18, nombre: 'El Violoncello' },
+  { num: 19, nombre: 'La Garza'       },
+  { num: 20, nombre: 'El Pájaro'      },
+  { num: 21, nombre: 'La Mano'        },
+  { num: 22, nombre: 'La Bota'        },
+  { num: 23, nombre: 'La Luna'        },
+  { num: 24, nombre: 'El Cotorro'     },
+  { num: 25, nombre: 'El Borracho'    },
+  { num: 26, nombre: 'El Negrito'     },
+  { num: 27, nombre: 'El Corazón'     },
+  { num: 28, nombre: 'La Sandía'      },
+  { num: 29, nombre: 'El Tambor'      },
+  { num: 30, nombre: 'El Camarón'     },
+  { num: 31, nombre: 'Las Jaras'      },
+  { num: 32, nombre: 'El Músico'      },
+  { num: 33, nombre: 'La Araña'       },
+  { num: 34, nombre: 'El Soldado'     },
+  { num: 35, nombre: 'La Estrella'    },
+  { num: 36, nombre: 'El Cazo'        },
+  { num: 37, nombre: 'El Mundo'       },
+  { num: 38, nombre: 'El Apache'      },
+  { num: 39, nombre: 'El Nopal'       },
+  { num: 40, nombre: 'El Alacrán'     },
+  { num: 41, nombre: 'La Rosa'        },
+  { num: 42, nombre: 'La Calavera'    },
+  { num: 43, nombre: 'La Campana'     },
+  { num: 44, nombre: 'El Cantarito'   },
+  { num: 45, nombre: 'El Venado'      },
+  { num: 46, nombre: 'El Sol'         },
+  { num: 47, nombre: 'La Corona'      },
+  { num: 48, nombre: 'La Chalupa'     },
+  { num: 49, nombre: 'El Pino'        },
+  { num: 50, nombre: 'El Pescado'     },
+  { num: 51, nombre: 'La Palma'       },
+  { num: 52, nombre: 'La Maceta'      },
+  { num: 53, nombre: 'El Arpa'        },
+  { num: 54, nombre: 'La Rana'        },
+];
+
+/* ── STATE ── */
+let tablasData   = [];   // array of arrays of carta objects
+const imgCache   = {};   // num -> dataURL (para PDF)
+
+/* ── UTILS ── */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function cfg(id) {
+  const el = document.getElementById(id);
+  return el.tagName === 'SELECT' ? el.value : parseFloat(el.value) || 0;
+}
+
+/* Tamaño real de página en cm según formato + orientación */
+function getPageDims() {
+  const formato     = cfg('formato');
+  const orientacion = cfg('orientacion');
+  const SIZES = {
+    a4:     [21.0,  29.7],
+    letter: [21.59, 27.94],
+    legal:  [21.59, 35.56],
+  };
+  let [w, h] = SIZES[formato];
+  if (orientacion === 'landscape') [w, h] = [h, w];
+  return { w, h };
+}
+
+/* ── VALIDACIÓN ── */
+function updateInfo() {
+  const filas  = Math.round(cfg('filas'));
+  const cols   = Math.round(cfg('cols'));
+  const nT     = Math.round(cfg('numTablas'));
+  const tW     = cfg('ancho');
+  const tH     = cfg('alto');
+  const total  = filas * cols;
+  const warn   = document.getElementById('warn-cards');
+  const info   = document.getElementById('info-tablas-pagina');
+
+  warn.style.display = total > 54 ? 'block' : 'none';
+
+  const { w: pW, h: pH } = getPageDims();
+  const margin = 0.8;
+  const tppH = Math.max(1, Math.floor((pW - margin) / (tW + margin)));
+  const tppV = Math.max(1, Math.floor((pH - margin) / (tH + margin)));
+  const tpp  = tppH * tppV;
+  const pages = Math.ceil(nT / tpp);
+
+  if (tW > pW - margin || tH > pH - margin) {
+    info.innerHTML = `<strong>⚠️ Tabla más grande que la página.</strong> Se reducirá para ajustar.`;
+  } else {
+    info.innerHTML = `<strong>${tpp}</strong> tabla(s) por página · <strong>${pages}</strong> página(s) total`;
+  }
+}
+
+['ancho','alto','filas','cols','numTablas','formato','orientacion'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateInfo);
+  document.getElementById(id).addEventListener('change', updateInfo);
+});
+
+/* ── GENERAR TABLAS ── */
+function generarTablas() {
+  const filas  = Math.max(1, Math.round(cfg('filas')));
+  const cols   = Math.max(1, Math.round(cfg('cols')));
+  const nT     = Math.max(1, Math.round(cfg('numTablas')));
+  const tW     = cfg('ancho');
+  const tH     = cfg('alto');
+  const total  = filas * cols;
+
+  tablasData = [];
+  for (let i = 0; i < nT; i++) {
+    let cartas;
+    if (total <= 54) {
+      cartas = shuffle(CARTAS).slice(0, total);
+    } else {
+      // Si la cuadrícula supera 54, repetir aleatoriamente
+      const base = shuffle(CARTAS);
+      cartas = [];
+      while (cartas.length < total) {
+        cartas.push(...shuffle(CARTAS));
+      }
+      cartas = cartas.slice(0, total);
+    }
+    tablasData.push(cartas);
+  }
+
+  renderPreview(filas, cols, tW, tH);
+  updateInfo();
+}
+
+/* ── RENDER PREVIEW ── */
+function renderPreview(filas, cols, tW, tH) {
+  const container = document.getElementById('tablas-container');
+  container.innerHTML = '';
+
+  // Escala de previsualización: max 280px de ancho
+  const PREVIEW_MAX_W = 280;
+  const scale  = Math.min(PREVIEW_MAX_W / tW, 380 / tH, 28); // max 28px/cm
+  const pxW    = Math.round(tW * scale);
+  const pxH    = Math.round(tH * scale);
+
+  // Proporción del encabezado
+  const headerPx = Math.max(18, Math.round(pxH * 0.065));
+  const numPx    = Math.max(12, Math.round(pxH * 0.035));
+  const gridPx   = pxH - headerPx - numPx;
+
+  tablasData.forEach((cartas, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tabla-wrap';
+
+    const tabla = document.createElement('div');
+    tabla.className = 'tabla';
+    tabla.style.cssText = `width:${pxW}px; height:${pxH}px;`;
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'tabla-header';
+    hdr.style.fontSize = Math.max(8, headerPx * 0.6) + 'px';
+    hdr.style.height = headerPx + 'px';
+    hdr.style.lineHeight = headerPx + 'px';
+    hdr.textContent = 'LOTERÍA';
+
+    // Número
+    const num = document.createElement('div');
+    num.className = 'tabla-subheader';
+    num.style.fontSize = Math.max(6, numPx * 0.7) + 'px';
+    num.style.height = numPx + 'px';
+    num.style.lineHeight = numPx + 'px';
+    num.textContent = `Tabla ${i + 1}`;
+
+    // Grid — usa 1fr para que los bordes de celda no desborden
+    const grid = document.createElement('div');
+    grid.className = 'tabla-grid';
+    grid.style.cssText = `
+      grid-template-columns: repeat(${cols}, 1fr);
+      grid-template-rows: repeat(${filas}, 1fr);
+      height: ${gridPx}px;
+      width: ${pxW}px;
+    `;
+
+    cartas.forEach(carta => {
+      const cell = document.createElement('div');
+      cell.className = 'tabla-celda';
+      const img = document.createElement('img');
+      img.src = IMG_BASE + carta.num + '.jpg';
+      img.alt = carta.nombre;
+      img.crossOrigin = 'anonymous';
+      img.loading = 'lazy';
+      img.title = carta.nombre;
+      cell.appendChild(img);
+      grid.appendChild(cell);
+    });
+
+    tabla.appendChild(hdr);
+    tabla.appendChild(num);
+    tabla.appendChild(grid);
+    wrap.appendChild(tabla);
+    container.appendChild(wrap);
+  });
+
+  document.getElementById('contador').textContent =
+    `${tablasData.length} tabla(s) generada(s)`;
+}
+
+/* ── CARGA DE IMÁGENES COMO DATA URL (para PDF) ── */
+async function loadImgDataURL(num) {
+  if (imgCache[num]) return imgCache[num];
+  return new Promise((resolve, reject) => {
+    const url = IMG_BASE + num + '.jpg';
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.naturalWidth  || 200;
+        canvas.height = img.naturalHeight || 280;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+        imgCache[num] = dataURL;
+        resolve(dataURL);
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => reject(new Error(`No se pudo cargar carta ${num}`));
+    img.src = url + '?cb=' + Date.now(); // evitar caché antigua sin CORS
+  });
+}
+
+/* ── GENERAR PDF ── */
+async function descargarPDF() {
+  if (tablasData.length === 0) generarTablas();
+
+  const filas  = Math.max(1, Math.round(cfg('filas')));
+  const cols   = Math.max(1, Math.round(cfg('cols')));
+  const tW     = cfg('ancho');
+  const tH     = cfg('alto');
+  const formato     = cfg('formato');
+  const orientacion = cfg('orientacion');
+
+  // Recolectar números de cartas necesarios
+  const needed = [...new Set(tablasData.flatMap(t => t.map(c => c.num)))];
+
+  showOverlay(true, 0, 'Cargando imágenes…');
+
+  // Cargar imágenes (en lotes de 8 para no saturar)
+  const BATCH = 8;
+  let loaded = 0;
+  for (let i = 0; i < needed.length; i += BATCH) {
+    const batch = needed.slice(i, i + BATCH);
+    await Promise.all(batch.map(async num => {
+      try { await loadImgDataURL(num); } catch(e) { console.warn(e); }
+      loaded++;
+      const pct = Math.round((loaded / needed.length) * 60);
+      setProgress(pct, `Cargando imágenes… ${loaded}/${needed.length}`);
+    }));
+  }
+
+  setProgress(65, 'Construyendo PDF…');
+  await tick();
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: orientacion, unit: 'cm', format: formato });
+
+    // Tamaño real de la página según jsPDF
+    const { w: pW, h: pH } = getPageDims();
+    const MARGIN = 0.8; // cm
+
+    // Cuántas tablas caben por página
+    const slotW     = tW + MARGIN;
+    const slotH     = tH + MARGIN;
+    let tablasXpag  = Math.max(1, Math.floor((pW - MARGIN) / slotW));
+    let tablasYpag  = Math.max(1, Math.floor((pH - MARGIN) / slotH));
+
+    // Si una tabla excede la página, escalarla para que quepa
+    let scaleX = 1, scaleY = 1;
+    if (tW > pW - 2 * MARGIN) scaleX = (pW - 2 * MARGIN) / tW;
+    if (tH > pH - 2 * MARGIN) scaleY = (pH - 2 * MARGIN) / tH;
+    const scaleF   = Math.min(scaleX, scaleY);
+    const drawW    = tW  * scaleF;
+    const drawH    = tH  * scaleF;
+    const slotW2   = drawW + MARGIN;
+    const slotH2   = drawH + MARGIN;
+    tablasXpag = Math.max(1, Math.floor((pW - MARGIN) / slotW2));
+    tablasYpag = Math.max(1, Math.floor((pH - MARGIN) / slotH2));
+    const tpp = tablasXpag * tablasYpag;
+
+    // Proporciones del encabezado dentro de la tabla
+    const HDR_RATIO = 0.072;
+    const NUM_RATIO = 0.030;
+    const hdrH = drawH * HDR_RATIO;
+    const numH = drawH * NUM_RATIO;
+    const bodyH = drawH - hdrH - numH;
+    const cellW = drawW / cols;
+    const cellH = bodyH / filas;
+
+    for (let i = 0; i < tablasData.length; i++) {
+      if (i > 0 && i % tpp === 0) doc.addPage();
+
+      const posInPage = i % tpp;
+      const col = posInPage % tablasXpag;
+      const row = Math.floor(posInPage / tablasXpag);
+      const x = MARGIN + col * slotW2;
+      const y = MARGIN + row * slotH2;
+
+      // ── Fondo de encabezado rojo ──
+      doc.setFillColor(200, 16, 46);
+      doc.rect(x, y, drawW, hdrH, 'F');
+
+      // ── Texto "LOTERÍA" ──
+      doc.setTextColor(255, 255, 255);
+      const hdrFontSz = Math.max(5, hdrH * 24);
+      doc.setFontSize(hdrFontSz);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LOTERÍA', x + drawW / 2, y + hdrH * 0.72, { align: 'center' });
+
+      // ── Subencabezado amarillo ──
+      doc.setFillColor(245, 166, 35);
+      doc.rect(x, y + hdrH, drawW, numH, 'F');
+      doc.setTextColor(123, 63, 0);
+      const numFontSz = Math.max(4, numH * 18);
+      doc.setFontSize(numFontSz);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Tabla ${i + 1}`, x + drawW / 2, y + hdrH + numH * 0.78, { align: 'center' });
+
+      // ── Cartas ──
+      const cartas = tablasData[i];
+      for (let r = 0; r < filas; r++) {
+        for (let c = 0; c < cols; c++) {
+          const idx = r * cols + c;
+          if (idx >= cartas.length) continue;
+          const carta = cartas[idx];
+          const cx = x + c * cellW;
+          const cy = y + hdrH + numH + r * cellH;
+          const dataURL = imgCache[carta.num];
+          if (dataURL) {
+            doc.addImage(dataURL, 'JPEG', cx, cy, cellW, cellH,
+                         undefined, 'FAST');
+          } else {
+            // Placeholder gris si falló la carga
+            doc.setFillColor(220, 220, 220);
+            doc.rect(cx, cy, cellW, cellH, 'F');
+          }
+        }
+      }
+
+      // ── Borde exterior de la tabla ──
+      doc.setDrawColor(160, 0, 32);
+      doc.setLineWidth(0.06);
+      doc.rect(x, y, drawW, drawH);
+
+      // ── Separadores de celdas ──
+      doc.setDrawColor(200, 16, 46);
+      doc.setLineWidth(0.015);
+      for (let c = 1; c < cols; c++) {
+        doc.line(x + c * cellW, y + hdrH + numH,
+                 x + c * cellW, y + drawH);
+      }
+      for (let r = 1; r < filas; r++) {
+        doc.line(x, y + hdrH + numH + r * cellH,
+                 x + drawW, y + hdrH + numH + r * cellH);
+      }
+
+      const pct = 65 + Math.round(((i + 1) / tablasData.length) * 35);
+      setProgress(pct, `Tabla ${i + 1} de ${tablasData.length}…`);
+      if (i % 4 === 0) await tick();
+    }
+
+    setProgress(100, '¡Listo! Guardando…');
+    await tick();
+    doc.save('tablas-loteria-mexicana.pdf');
+
+  } catch (err) {
+    console.error(err);
+    alert('Error al generar el PDF:\n' + err.message);
+  }
+
+  showOverlay(false);
+}
+
+/* ── HELPERS UI ── */
+function showOverlay(show, pct = 0, msg = '') {
+  const ov = document.getElementById('overlay');
+  ov.classList.toggle('active', show);
+  if (show) { setProgress(pct, msg); }
+}
+function setProgress(pct, msg) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('overlay-msg').textContent = msg;
+}
+function tick() {
+  return new Promise(r => setTimeout(r, 0));
+}
+
+/* ── INIT ── */
+updateInfo();
+generarTablas();
+</script>
+</body>
+</html>
