@@ -4,18 +4,25 @@ Crea e imprime tus propias tablas de Lotería Mexicana con las cartas tradiciona
 
 ---
 
-## ¿Cómo descargarlo y abrirlo?
+## ⬇️ Descarga directa
+
+👉 **[Haz clic aquí para descargar `loteria-generator.html`](https://raw.githubusercontent.com/cisnerosnow/loteria/main/loteria-generator.html)**
+
+> Si al hacer clic se abre una página con código en lugar de descargarse, presiona **Ctrl + S** (o **Cmd + S** en Mac) para guardar el archivo. Asegúrate de que el nombre termine en `.html`.
+
+---
+
+## ¿Cómo abrirlo?
 
 No necesitas instalar nada. Solo sigue estos pasos:
 
 ### Paso 1 — Descarga el archivo
 
-1. En esta página de GitHub, busca el archivo **`loteria-generator.html`**
-2. Haz clic en el nombre del archivo
-3. En la página que se abre, haz clic en el botón de descarga (ícono de flecha hacia abajo ↓) en la esquina superior derecha
-4. Guarda el archivo en tu computadora (por ejemplo en el Escritorio)
+Usa el enlace de arriba ☝️ o búscalo en esta página de GitHub:
 
-> También puedes hacer clic en el botón verde **"Code"** → **"Download ZIP"**, descomprimir el archivo y encontrar `loteria-generator.html` dentro.
+1. Haz clic en el archivo **`loteria-generator.html`**
+2. Haz clic en el botón de descarga (ícono ↓) en la esquina superior derecha
+3. Guárdalo en tu computadora (por ejemplo en el Escritorio)
 
 ### Paso 2 — Ábrelo en tu navegador
 
